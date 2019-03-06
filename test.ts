@@ -1,5 +1,5 @@
 import { readFileSync } from "deno";
-import { test, equal, runTests } from "https://deno.land/x/testing/mod.ts";
+import { test, assert, runIfMain } from "https://deno.land/std/testing/mod.ts";
 import { ChaCha20 } from "./mod.ts";
 
 interface TestVector {
@@ -43,7 +43,7 @@ test(function encryption() {
   const chacha20: ChaCha20 = new ChaCha20();
   for (const { key, iv, ct, pt, ibc } of testVectors) {
     const actual: Uint8Array = chacha20.encrypt(key, pt, iv, ibc);
-    equal(actual, ct);
+    assert.equal(actual, ct);
   }
 });
 
@@ -51,8 +51,8 @@ test(function decryption() {
   const chacha20: ChaCha20 = new ChaCha20();
   for (const { key, iv, ct, pt, ibc } of testVectors) {
     const actual: Uint8Array = chacha20.decrypt(key, ct, iv, ibc);
-    equal(actual, pt);
+    assert.equal(actual, pt);
   }
 });
 
-runTests();
+runIfMain(import.meta, { parallel: true });
