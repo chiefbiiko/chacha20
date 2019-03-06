@@ -1,6 +1,14 @@
-import { readFileSync } from "deno";
+const { readFileSync } = Deno;
 import { test, assert, runIfMain } from "https://deno.land/std/testing/mod.ts";
 import { ChaCha20 } from "./mod.ts";
+
+interface RawTestVector {
+  key: string;
+  iv: string;
+  ct: string;
+  pt?: string;
+  ibc?: number;
+}
 
 interface TestVector {
   key: Uint8Array;
@@ -15,7 +23,7 @@ function hex2bin(hex: string): Uint8Array {
     throw new Error("Invalid hex string");
   }
   let bin: Uint8Array = new Uint8Array(hex.length / 2);
-  for (let i: number = hex.length / 2 - 1; i !== -1; i--) {
+  for (let i: number = hex.length / 2 - 1; i !== -1; --i) {
     bin[i] = parseInt(hex.substr(2 * i, 2), 16);
   }
   return bin;
@@ -23,13 +31,7 @@ function hex2bin(hex: string): Uint8Array {
 
 const testVectors: Array<TestVector> = JSON.parse(
   new TextDecoder().decode(readFileSync("./test_vectors.json"))
-).map(function parseTestVector(v: {
-  key: string;
-  iv: string;
-  ct: string;
-  pt?: string;
-  ibc?: number;
-}): TestVector {
+).map(function parseTestVector(v: RawTestVector): TestVector {
   return {
     key: hex2bin(v.key),
     iv: hex2bin(v.iv),
