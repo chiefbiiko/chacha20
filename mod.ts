@@ -12,18 +12,6 @@ export function chacha20(
   counter: number,
   text: Uint8Array
 ): void {
-  if (key.byteLength !== KEY_BYTES) {
-    return null;
-  }
-
-  if (nonce.byteLength !== NONCE_BYTES) {
-    return null;
-  }
-
-  if (counter < 0 || counter % 1) {
-    return null;
-  }
-
   const keyChunk: Uint8Array = new Uint8Array(64);
   const state: Uint32Array = new Uint32Array(16);
   const initialState: Uint32Array = chacha20InitState(key, nonce, counter);
