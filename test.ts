@@ -1,60 +1,71 @@
-const { readFileSync } = Deno;
-import { test, assert, runIfMain } from "https://deno.land/std/testing/mod.ts";
-import { ChaCha20 } from "./mod.ts";
+import { test, runIfMain } from "https://deno.land/std/testing/mod.ts";
+import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+import { encode } from "https://denopkg.com/chiefbiiko/std-encoding/mod.ts";
+import { chacha20 } from "./mod.ts";
 
-interface RawTestVector {
-  key: string;
-  iv: string;
-  ct: string;
-  pt?: string;
-  ibc?: number;
-}
+import "./chacha20_init_state/chacha20_init_state_test.ts";
+import "./chacha20_block/chacha20_block_test.ts";
+import "./chacha20_quarter_round/chacha20_quarter_round_test.ts";
 
 interface TestVector {
   key: Uint8Array;
-  iv: Uint8Array;
-  ct: Uint8Array;
-  pt?: Uint8Array;
-  ibc?: number;
+  nonce: Uint8Array;
+  counter: number;
+  plaintext: Uint8Array;
+  ciphertext: Uint8Array;
 }
 
-function hex2bin(hex: string): Uint8Array {
-  if (!/^[0-9a-fA-F]+$/ || hex.length % 2) {
-    throw new Error("Invalid hex string");
-  }
-  let bin: Uint8Array = new Uint8Array(hex.length / 2);
-  for (let i: number = hex.length / 2 - 1; i !== -1; --i) {
-    bin[i] = parseInt(hex.substr(2 * i, 2), 16);
-  }
-  return bin;
+function loadTestVectors(): TestVector[] {
+  return JSON.parse(
+    new TextDecoder().decode(Deno.readFileSync(`./test_vectors.json`))
+  ).map(
+    (testVector: { [key: string]: any }): TestVector => ({
+      key: encode(testVector.key, "hex"),
+      nonce: encode(testVector.nonce, "hex"),
+      counter: testVector.counter,
+      plaintext: encode(testVector.plaintext, "hex"),
+      ciphertext: encode(testVector.ciphertext, "hex")
+    })
+  );
 }
 
-const testVectors: Array<TestVector> = JSON.parse(
-  new TextDecoder().decode(readFileSync("./test_vectors.json"))
-).map(function parseTestVector(v: RawTestVector): TestVector {
-  return {
-    key: hex2bin(v.key),
-    iv: hex2bin(v.iv),
-    ct: hex2bin(v.ct),
-    pt: v.pt ? hex2bin(v.pt) : new Uint8Array(v.ct.length / 2),
-    ibc: v.ibc ? v.ibc : null
-  };
-});
+// See https://tools.ietf.org/html/rfc8439
+const testVectors: TestVector[] = loadTestVectors();
 
-test(function encryption() {
-  const chacha20: ChaCha20 = new ChaCha20();
-  for (const { key, iv, ct, pt, ibc } of testVectors) {
-    const actual: Uint8Array = chacha20.encrypt(key, pt, iv, ibc);
-    assert.equal(actual, ct);
-  }
-});
+testVectors.forEach(
+  (
+    { key, nonce, counter, plaintext, ciphertext: expected }: TestVector,
+    i: number
+  ): void => {
+    test({
+      name: `chacha20 encryption [${i}]`,
+      fn(): void {
+        const ciphertext: Uint8Array = new Uint8Array(plaintext.byteLength);
 
-test(function decryption() {
-  const chacha20: ChaCha20 = new ChaCha20();
-  for (const { key, iv, ct, pt, ibc } of testVectors) {
-    const actual: Uint8Array = chacha20.decrypt(key, ct, iv, ibc);
-    assert.equal(actual, pt);
+        chacha20(ciphertext, key, nonce, counter, plaintext);
+
+        assertEquals(ciphertext, expected);
+      }
+    });
   }
-});
+);
+
+testVectors.forEach(
+  (
+    { key, nonce, counter, plaintext: expected, ciphertext }: TestVector,
+    i: number
+  ): void => {
+    test({
+      name: `chacha20 decryption [${i}]`,
+      fn(): void {
+        const plaintext: Uint8Array = new Uint8Array(ciphertext.byteLength);
+
+        chacha20(plaintext, key, nonce, counter, ciphertext);
+
+        assertEquals(plaintext, expected);
+      }
+    });
+  }
+);
 
 runIfMain(import.meta, { parallel: true });

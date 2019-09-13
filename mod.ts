@@ -1,162 +1,63 @@
-/**
- * ChaCha20 class
- */
-export class ChaCha20 {
-  keySize: number;
-  nonceSize: number;
-  input: Uint32Array;
+import { chacha20Block } from "./chacha20_block/chacha20_block.ts";
+import { chacha20InitState } from "./chacha20_init_state/chacha20_init_state.ts";
+import { xor } from "./util/util.ts";
 
-  /**
-   * ctor
-   */
-  constructor() {
-    this.keySize = 32; // 256 bit key
-    this.nonceSize = 8; //  64 bit nonce
+export const KEY_BYTES: number = 32;
+export const NONCE_BYTES: number = 12;
+
+export function chacha20(
+  out: Uint8Array,
+  key: Uint8Array,
+  nonce: Uint8Array,
+  counter: number,
+  text: Uint8Array
+): void {
+  if (key.byteLength !== KEY_BYTES) {
+    return null;
   }
 
-  /**
-   * Init, private function
-   * @param {Array} key The secret key as byte array (32 byte)
-   * @param {Array} nonce The nonce (IV) as byte array (8 byte)
-   * @param {Number} counter Optional counter init value, 0 is default
-   * @return {ChaCha20} this
-   */
-  private init(
-    key: Uint8Array,
-    nonce: Uint8Array,
-    counter: number = 0
-  ): ChaCha20 {
-    this.input = new Uint32Array(16);
-    this.input[0] = 0x61707865; // constant "expand 32-byte k"
-    this.input[1] = 0x3320646e;
-    this.input[2] = 0x79622d32;
-    this.input[3] = 0x6b206574;
-    this.input[4] = this.U8TO32_LITTLE(key, 0); // key
-    this.input[5] = this.U8TO32_LITTLE(key, 4);
-    this.input[6] = this.U8TO32_LITTLE(key, 8);
-    this.input[7] = this.U8TO32_LITTLE(key, 12);
-    this.input[8] = this.U8TO32_LITTLE(key, 16);
-    this.input[9] = this.U8TO32_LITTLE(key, 20);
-    this.input[10] = this.U8TO32_LITTLE(key, 24);
-    this.input[11] = this.U8TO32_LITTLE(key, 28);
-    this.input[12] = counter & 0xffffffff; // counter, (chacha20 is like a block cipher in CTR mode)
-    this.input[13] = 0;
-    this.input[14] = this.U8TO32_LITTLE(nonce, 0); // nonce
-    this.input[15] = this.U8TO32_LITTLE(nonce, 4);
-    return this;
+  if (nonce.byteLength !== NONCE_BYTES) {
+    return null;
   }
 
-  private U8TO32_LITTLE(x: Uint8Array, i: number): number {
-    return x[i] | (x[i + 1] << 8) | (x[i + 2] << 16) | (x[i + 3] << 24);
+  if (counter < 0 || counter % 1) {
+    return null;
   }
 
-  private U32TO8_LITTLE(x: any, i: number, u: number) {
-    x[i] = u & 0xff;
-    u >>>= 8;
-    x[i + 1] = u & 0xff;
-    u >>>= 8;
-    x[i + 2] = u & 0xff;
-    u >>>= 8;
-    x[i + 3] = u & 0xff;
+  const keyChunk: Uint8Array = new Uint8Array(64);
+  const state: Uint32Array = new Uint32Array(16);
+  const initialState: Uint32Array = chacha20InitState(key, nonce, counter);
+
+  const loopEnd: number = Math.floor(text.byteLength / 64);
+  const rmd: number = text.byteLength % 64;
+
+  let textOffset: number = 0;
+  let outOffset: number = 0;
+  let i: number;
+
+  for (i = 0; i < loopEnd; ++i, textOffset = i * 64, outOffset += 64) {
+    chacha20Block(keyChunk, null, null, counter + i, state, initialState);
+    xor(
+      text.subarray(textOffset, textOffset + 64),
+      keyChunk,
+      64,
+      out,
+      outOffset
+    );
   }
 
-  private ROTATE(v: number, c: number): number {
-    return (v << c) | (v >>> (32 - c));
+  if (rmd) {
+    chacha20Block(keyChunk, null, null, counter + loopEnd, state, initialState);
+    xor(
+      text.subarray(loopEnd * 64, text.byteLength),
+      keyChunk,
+      rmd,
+      out,
+      outOffset
+    );
   }
 
-  private QUARTERROUND(x: any, a: number, b: number, c: number, d: number) {
-    x[a] += x[b];
-    x[d] = this.ROTATE(x[d] ^ x[a], 16);
-    x[c] += x[d];
-    x[b] = this.ROTATE(x[b] ^ x[c], 12);
-    x[a] += x[b];
-    x[d] = this.ROTATE(x[d] ^ x[a], 8);
-    x[c] += x[d];
-    x[b] = this.ROTATE(x[b] ^ x[c], 7);
-  }
-
-  private stream(src: Uint8Array, dst: Uint8Array, len: number) {
-    const s = new Uint32Array(16);
-    const buf = new Uint8Array(64);
-    let i = 0;
-    let dpos = 0;
-    let spos = 0;
-
-    while (len > 0) {
-      for (i = 16; i--; ) {
-        s[i] = this.input[i];
-      }
-      for (i = 0; i < 10; ++i) {
-        this.QUARTERROUND(s, 0, 4, 8, 12);
-        this.QUARTERROUND(s, 1, 5, 9, 13);
-        this.QUARTERROUND(s, 2, 6, 10, 14);
-        this.QUARTERROUND(s, 3, 7, 11, 15);
-        this.QUARTERROUND(s, 0, 5, 10, 15);
-        this.QUARTERROUND(s, 1, 6, 11, 12);
-        this.QUARTERROUND(s, 2, 7, 8, 13);
-        this.QUARTERROUND(s, 3, 4, 9, 14);
-      }
-      for (i = 0; i < 16; ++i) {
-        s[i] += this.input[i];
-      }
-      for (i = 0; i < 16; ++i) {
-        this.U32TO8_LITTLE(buf, 4 * i, s[i]);
-      }
-
-      // inc 64 bit counter
-      if (++this.input[12] === 0) {
-        this.input[13]++;
-      }
-      if (len <= 64) {
-        for (i = len; i--; ) {
-          dst[i + dpos] = src[i + spos] ^ buf[i];
-        }
-        return;
-      }
-      for (i = 64; i--; ) {
-        dst[i + dpos] = src[i + spos] ^ buf[i];
-      }
-      len -= 64;
-      spos += 64;
-      dpos += 64;
-    }
-  }
-
-  /**
-   * Encrypt some plaintext
-   * @param {Uint8Array} key The secret key as byte array (32 byte)
-   * @param {Uint8Array} pt Plaintext as byte array
-   * @param {Uint8Array} iv The nonce (IV) as byte array (8 byte)
-   * @param {Number} cnt Optional counter init value, 0 is default
-   * @return {Uint8Array} ct Ciphertext as byte array
-   */
-  encrypt(
-    key: Uint8Array,
-    pt: Uint8Array,
-    iv: Uint8Array,
-    cnt: number = 0
-  ): Uint8Array {
-    let ct = new Uint8Array(pt.length);
-    this.init(key, iv, cnt).stream(pt, ct, pt.length);
-    return ct;
-  }
-
-  /**
-   * Decrypt some ciphertext
-   * @param {Uint8Array} key The secret key as byte array
-   * @param {Uint8Array} ct Ciphertext as byte array
-   * @param {Uint8Array} iv The nonce (IV) as byte array
-   * @param {Number} cnt Optional counter init value, 0 is default
-   * @return {Uint8Array} pt Plaintext as byte array
-   */
-  decrypt(
-    key: Uint8Array,
-    ct: Uint8Array,
-    iv: Uint8Array,
-    cnt: number = 0
-  ): Uint8Array {
-    let pt = new Uint8Array(ct.length);
-    this.init(key, iv, cnt).stream(ct, pt, ct.length);
-    return pt;
-  }
+  keyChunk.fill(0x00, 0, keyChunk.byteLength);
+  state.fill(0, 0, state.byteLength);
+  initialState.fill(0, 0, initialState.byteLength);
 }
