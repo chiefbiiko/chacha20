@@ -5,7 +5,7 @@ import { chacha20Block } from "./chacha20_block.ts";
 
 const {
   readFileSync,
-  platform: { os }
+  build: { os }
 } = Deno;
 
 const DIRNAME =

@@ -4,7 +4,7 @@ import { chacha20QuarterRound } from "./chacha20_quarter_round.ts";
 
 const {
   readFileSync,
-  platform: { os }
+  build: { os }
 } = Deno;
 
 const DIRNAME =
