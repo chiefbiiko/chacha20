@@ -1,5 +1,4 @@
-import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
-import { encode } from "https://denopkg.com/chiefbiiko/std-encoding/mod.ts";
+import { assertEquals, encode } from "./deps.ts";
 import { chacha20 } from "./mod.ts";
 
 interface TestVector {
@@ -14,7 +13,7 @@ function loadTestVectors(): TestVector[] {
   return JSON.parse(
     new TextDecoder().decode(Deno.readFileSync(`./test_vectors.json`))
   ).map(
-    (testVector: { [key: string]: any }): TestVector => ({
+    (testVector: { [key: string]: any; }): TestVector => ({
       key: encode(testVector.key, "hex"),
       nonce: encode(testVector.nonce, "hex"),
       counter: testVector.counter,

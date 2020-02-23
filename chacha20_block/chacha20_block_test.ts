@@ -1,5 +1,4 @@
-import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
-import { encode } from "https://denopkg.com/chiefbiiko/std-encoding/mod.ts";
+import { assertEquals, encode } from "./../deps.ts";
 import { chacha20Block } from "./chacha20_block.ts";
 
 const {
@@ -7,8 +6,7 @@ const {
   build: { os }
 } = Deno;
 
-const DIRNAME =
-  (os !== "win" ? "/" : "") +
+const DIRNAME = (os !== "win" ? "/" : "") +
   import.meta.url.replace(/^file:\/+|\/[^/]+$/g, "");
 
 interface TestVector {
@@ -24,7 +22,7 @@ function loadTestVectors(): TestVector[] {
       readFileSync(`${DIRNAME}/chacha20_block_test_vectors.json`)
     )
   ).map(
-    (testVector: { [key: string]: any }): TestVector => ({
+    (testVector: { [key: string]: any; }): TestVector => ({
       key: encode(testVector.key, "hex"),
       nonce: encode(testVector.nonce, "hex"),
       counter: testVector.counter,
