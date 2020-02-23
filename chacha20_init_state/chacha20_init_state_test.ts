@@ -1,4 +1,3 @@
-import { test, runIfMain } from "https://deno.land/std/testing/mod.ts";
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 import { encode } from "https://denopkg.com/chiefbiiko/std-encoding/mod.ts";
 import { chacha20InitState } from "./chacha20_init_state.ts";
@@ -46,7 +45,7 @@ const constants: Uint32Array = Uint32Array.from([
 
 testVectors.forEach(
   ({ key, nonce, counter }: TestVector, i: number): void => {
-    test({
+    Deno.test({
       name: `chacha20InitState constants [${i}]`,
       fn(): void {
         const initialState: Uint32Array = chacha20InitState(
@@ -64,7 +63,7 @@ testVectors.forEach(
 
 testVectors.forEach(
   ({ key, nonce, counter, expected }: TestVector, i: number): void => {
-    test({
+    Deno.test({
       name: `chacha20InitState [${i}]`,
       fn(): void {
         assertEquals(chacha20InitState(key, nonce, counter), expected);
@@ -72,5 +71,3 @@ testVectors.forEach(
     });
   }
 );
-
-runIfMain(import.meta, { parallel: true });

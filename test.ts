@@ -1,11 +1,6 @@
-import { test, runIfMain } from "https://deno.land/std/testing/mod.ts";
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 import { encode } from "https://denopkg.com/chiefbiiko/std-encoding/mod.ts";
 import { chacha20 } from "./mod.ts";
-
-import "./chacha20_init_state/chacha20_init_state_test.ts";
-import "./chacha20_block/chacha20_block_test.ts";
-import "./chacha20_quarter_round/chacha20_quarter_round_test.ts";
 
 interface TestVector {
   key: Uint8Array;
@@ -37,7 +32,7 @@ testVectors.forEach(
     { key, nonce, counter, plaintext, ciphertext: expected }: TestVector,
     i: number
   ): void => {
-    test({
+    Deno.test({
       name: `chacha20 encryption [${i}]`,
       fn(): void {
         const ciphertext: Uint8Array = new Uint8Array(plaintext.byteLength);
@@ -55,7 +50,7 @@ testVectors.forEach(
     { key, nonce, counter, plaintext: expected, ciphertext }: TestVector,
     i: number
   ): void => {
-    test({
+    Deno.test({
       name: `chacha20 decryption [${i}]`,
       fn(): void {
         const plaintext: Uint8Array = new Uint8Array(ciphertext.byteLength);
@@ -67,5 +62,3 @@ testVectors.forEach(
     });
   }
 );
-
-runIfMain(import.meta, { parallel: true });

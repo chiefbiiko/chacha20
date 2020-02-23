@@ -1,4 +1,3 @@
-import { test, runIfMain } from "https://deno.land/std/testing/mod.ts";
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 import { chacha20QuarterRound } from "./chacha20_quarter_round.ts";
 
@@ -43,7 +42,7 @@ testVectors.forEach(
     }: TestVector,
     i: number
   ): void => {
-    test({
+    Deno.test({
       name: `chacha20QuarterRound [${i}]`,
       fn(): void {
         const state = Uint32Array.from(initialState);
@@ -55,5 +54,3 @@ testVectors.forEach(
     });
   }
 );
-
-runIfMain(import.meta);
