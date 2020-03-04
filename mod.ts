@@ -25,7 +25,7 @@ export function chacha20(
 
   for (i = 0; i < loopEnd; ++i, textOffset = i * 64, outOffset += 64) {
     chacha20Block(keyChunk, null!, null!, counter + i, state, initialState);
-    
+
     xor(
       text.subarray(textOffset, textOffset + 64),
       keyChunk,
@@ -44,7 +44,7 @@ export function chacha20(
       state,
       initialState
     );
-    
+
     xor(
       text.subarray(loopEnd * 64, text.byteLength),
       keyChunk,

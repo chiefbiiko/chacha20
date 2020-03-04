@@ -1,4 +1,4 @@
-import { assertEquals, encode } from "./../deps.ts";
+import { assertEquals, encode } from "./../test_deps.ts";
 import { chacha20Block } from "./chacha20_block.ts";
 
 const {

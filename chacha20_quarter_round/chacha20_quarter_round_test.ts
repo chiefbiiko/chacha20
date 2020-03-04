@@ -1,4 +1,4 @@
-import { assertEquals } from "./../deps.ts";
+import { assertEquals } from "./../test_deps.ts";
 import { chacha20QuarterRound } from "./chacha20_quarter_round.ts";
 
 const {
